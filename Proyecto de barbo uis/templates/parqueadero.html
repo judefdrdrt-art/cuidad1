@@ -1,0 +1,339 @@
+{% extends "base.html" %}
+{% block title %}Entrada y Salida de Materiales - Ciudad Inteligente UIS{% endblock %}
+
+{% block content %}
+<div class="page-header-block" style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <h1 class="page-title">
+            <i class="ri-exchange-box-line"></i> Entrada y Salida de Materiales
+        </h1>
+        <p class="page-subtitle">Control y registro de flujo de materiales en tiempo real</p>
+    </div>
+    <div>
+        <span class="badge-status badge-available">
+            <span class="pulse-dot green"></span> Detección Serial: PARK|placa|espacio|accion
+        </span>
+    </div>
+</div>
+
+<!-- Full Alert Banner for Parking -->
+<div id="parking-full-alert-banner" style="display: none; background: rgba(244, 63, 94, 0.15); border: 2px solid var(--accent-rose); border-radius: 16px; padding: 1.25rem 1.5rem; margin-bottom: 2rem; backdrop-filter: blur(10px);">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        <div style="font-size: 2.2rem; color: var(--accent-rose);">
+            <i class="ri-car-line"></i>
+        </div>
+        <div style="flex: 1;">
+            <h4 style="font-family: var(--font-heading); color: #fff; font-size: 1.15rem; font-weight: 800; margin-bottom: 0.25rem;">
+                🚨 ¡PARQUEADERO COMPLETAMENTE LLENO!
+            </h4>
+            <p style="color: #fca5a5; font-size: 0.95rem; margin: 0;">
+                No hay plazas de estacionamiento disponibles (0 libres). El sistema ha bloqueado automáticamente el registro de nuevos ingresos.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Bar -->
+<div class="stats-overview-grid">
+    <div class="stat-box">
+        <div class="stat-box-icon icon-emerald">
+            <i class="ri-checkbox-circle-line"></i>
+        </div>
+        <div class="stat-box-data">
+            <span class="stat-number" id="slots-free-count">0</span>
+            <span class="stat-label">Espacios Libres</span>
+        </div>
+    </div>
+    
+    <div class="stat-box">
+        <div class="stat-box-icon icon-rose" style="background: rgba(244, 63, 94, 0.12); color: var(--accent-rose);">
+            <i class="ri-car-fill"></i>
+        </div>
+        <div class="stat-box-data">
+            <span class="stat-number" id="slots-occupied-count">0</span>
+            <span class="stat-label">Espacios Ocupados</span>
+        </div>
+    </div>
+    
+    <div class="stat-box">
+        <div class="stat-box-icon icon-cyan">
+            <i class="ri-dashboard-2-line"></i>
+        </div>
+        <div class="stat-box-data">
+            <span class="stat-number" id="slots-total-count">0</span>
+            <span class="stat-label">Capacidad Total</span>
+        </div>
+    </div>
+</div>
+
+<!-- Interactive Parking Slots Visual Grid -->
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <h3 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="ri-layout-grid-line" style="color: var(--accent-cyan);"></i> Mapa de Espacios de Parqueo
+    </h3>
+    
+    <div id="parking-slots-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1rem;">
+        <!-- Filled dynamically by JavaScript -->
+    </div>
+</div>
+
+<!-- Quick Simulation & Registration Panel -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- Form Ingreso -->
+    <div class="glass-panel" style="padding: 1.5rem;" id="card-ingreso-panel">
+        <h4 style="font-family: var(--font-heading); font-size: 1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; color: var(--accent-emerald);">
+            <span><i class="ri-login-box-line"></i> Registrar Ingreso Vehicular</span>
+            <span id="badge-ingreso-status" class="badge-status badge-available" style="font-size: 0.75rem;">Habilitado</span>
+        </h4>
+        
+        <div id="full-lock-warning" style="display: none; background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 8px; padding: 0.75rem; color: #fca5a5; font-size: 0.85rem; margin-bottom: 1rem;">
+            <i class="ri-lock-line"></i> <strong>Parqueadero Lleno:</strong> Libere un espacio antes de intentar registrar un nuevo vehículo.
+        </div>
+
+        <form id="form-ingreso" onsubmit="handleIngresar(event)">
+            <div class="form-group">
+                <label class="form-label">Placa del Vehículo</label>
+                <div class="input-with-icon">
+                    <input type="text" id="ingreso-placa" class="form-input" placeholder="Ej: ABC123" required style="padding-left: 1rem;" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Código de Espacio</label>
+                <div class="input-with-icon">
+                    <input type="text" id="ingreso-espacio" class="form-input" placeholder="Ej: P01" required style="padding-left: 1rem;" />
+                </div>
+            </div>
+            <button type="submit" id="btn-submit-ingreso" class="btn-primary" style="background: var(--grad-emerald);">
+                <i class="ri-check-line"></i> Registrar e Enviar Comando Arduino
+            </button>
+        </form>
+    </div>
+
+    <!-- Form Salida -->
+    <div class="glass-panel" style="padding: 1.5rem;">
+        <h4 style="font-family: var(--font-heading); font-size: 1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--accent-rose);">
+            <i class="ri-logout-box-line"></i> Registrar Salida Vehicular
+        </h4>
+        <form id="form-salida" onsubmit="handleSalir(event)">
+            <div class="form-group">
+                <label class="form-label">Placa del Vehículo</label>
+                <div class="input-with-icon">
+                    <input type="text" id="salida-placa" class="form-input" placeholder="Ej: ABC123" required style="padding-left: 1rem;" />
+                </div>
+            </div>
+            <button type="submit" class="btn-primary" style="background: linear-gradient(135deg, #f43f5e, #e11d48); margin-top: 2.1rem;">
+                <i class="ri-close-line"></i> Registrar Salida
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Detailed Table -->
+<div class="glass-panel">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
+        <h3 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700;">
+            <i class="ri-table-line" style="color: var(--accent-indigo);"></i> Listado de Plazas
+        </h3>
+        <button class="btn-secondary" style="padding: 0.4rem 0.9rem; font-size: 0.82rem;" onclick="loadParkingData()">
+            <i class="ri-refresh-line"></i> Recargar
+        </button>
+    </div>
+
+    <div class="table-responsive-wrapper">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Código Espacio</th>
+                    <th>Estado Disponibilidad</th>
+                    <th>Acción Rápida</th>
+                </tr>
+            </thead>
+            <tbody id="parking-body">
+                <!-- Filled via JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadParkingData() {
+        try {
+            const res = await fetch('/parking/data');
+            const data = await res.json();
+            renderParkingUI(data);
+        } catch (err) {
+            console.error("Error loading parking data:", err);
+            renderParkingUI([
+                { codigo: 'P01', disponible: true },
+                { codigo: 'P02', disponible: true },
+                { codigo: 'P03', disponible: false },
+                { codigo: 'P04', disponible: true },
+                { codigo: 'P05', disponible: true },
+                { codigo: 'P06', disponible: false },
+                { codigo: 'P07', disponible: true },
+                { codigo: 'P08', disponible: true }
+            ]);
+        }
+    }
+
+    function renderParkingUI(spaces) {
+        const grid = document.getElementById('parking-slots-grid');
+        const tbody = document.getElementById('parking-body');
+        const alertBanner = document.getElementById('parking-full-alert-banner');
+        const btnSubmit = document.getElementById('btn-submit-ingreso');
+        const lockWarning = document.getElementById('full-lock-warning');
+        const badgeIngreso = document.getElementById('badge-ingreso-status');
+        const inputPlaca = document.getElementById('ingreso-placa');
+        const inputEspacio = document.getElementById('ingreso-espacio');
+
+        grid.innerHTML = '';
+        tbody.innerHTML = '';
+
+        let free = 0;
+        let occupied = 0;
+
+        spaces.forEach(s => {
+            if (s.disponible) free++; else occupied++;
+
+            // Render slot card for grid
+            const slotCard = document.createElement('div');
+            slotCard.style.cssText = `
+                background: ${s.disponible ? 'rgba(16, 185, 129, 0.08)' : 'rgba(244, 63, 94, 0.08)'};
+                border: 1px solid ${s.disponible ? 'rgba(16, 185, 129, 0.25)' : 'rgba(244, 63, 94, 0.25)'};
+                border-radius: 12px;
+                padding: 1rem;
+                text-align: center;
+                transition: transform 0.2s;
+            `;
+            slotCard.innerHTML = `
+                <div style="font-size: 1.5rem; color: ${s.disponible ? 'var(--accent-emerald)' : 'var(--accent-rose)'}; margin-bottom: 0.2rem;">
+                    <i class="${s.disponible ? 'ri-parking-line' : 'ri-car-fill'}"></i>
+                </div>
+                <div style="font-family: var(--font-heading); font-weight: 800; font-size: 1.1rem;">${s.codigo}</div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: ${s.disponible ? 'var(--accent-emerald)' : 'var(--accent-rose)'}; margin-top: 0.2rem;">
+                    ${s.disponible ? 'LIBRE' : 'OCUPADO'}
+                </div>
+            `;
+            grid.appendChild(slotCard);
+
+            // Render table row
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong style="font-family: var(--font-heading);">${s.codigo}</strong></td>
+                <td>
+                    <span class="badge-status ${s.disponible ? 'badge-available' : 'badge-occupied'}">
+                        <i class="${s.disponible ? 'ri-checkbox-circle-line' : 'ri-close-circle-line'}"></i>
+                        ${s.disponible ? 'Disponible' : 'Ocupado'}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn-secondary" style="padding: 0.25rem 0.65rem; font-size: 0.78rem;" onclick="quickFillSpace('${s.codigo}', ${s.disponible})">
+                        ${s.disponible ? 'Simular Ingreso' : 'Liberar'}
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('slots-free-count').innerText = free;
+        document.getElementById('slots-occupied-count').innerText = occupied;
+        document.getElementById('slots-total-count').innerText = spaces.length;
+
+        // PARQUEADERO COMPLETAMENTE LLENO CONTROL
+        if (free === 0) {
+            alertBanner.style.display = 'block';
+            lockWarning.style.display = 'block';
+            btnSubmit.disabled = true;
+            btnSubmit.style.opacity = '0.5';
+            btnSubmit.style.cursor = 'not-allowed';
+            btnSubmit.innerHTML = '<i class="ri-lock-fill"></i> Registros Bloqueados (Lleno)';
+            inputPlaca.disabled = true;
+            inputEspacio.disabled = true;
+            badgeIngreso.className = 'badge-status badge-occupied';
+            badgeIngreso.innerText = 'BLOQUEADO (Lleno)';
+        } else {
+            alertBanner.style.display = 'none';
+            lockWarning.style.display = 'none';
+            btnSubmit.disabled = false;
+            btnSubmit.style.opacity = '1';
+            btnSubmit.style.cursor = 'pointer';
+            btnSubmit.innerHTML = '<i class="ri-check-line"></i> Registrar e Enviar Comando Arduino';
+            inputPlaca.disabled = false;
+            inputEspacio.disabled = false;
+            badgeIngreso.className = 'badge-status badge-available';
+            badgeIngreso.innerText = 'Habilitado';
+        }
+    }
+
+    async function handleIngresar(e) {
+        e.preventDefault();
+        const placa = document.getElementById('ingreso-placa').value.trim();
+        const espacio = document.getElementById('ingreso-espacio').value.trim();
+        try {
+            const res = await fetch('/parking/ingresar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ placa, espacio })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert(`✅ ${data.message || 'Registro exitoso'}\nComando transmitido a Arduino: ${data.command_sent || 'PARK_OPEN|' + espacio + '|' + placa}`);
+                document.getElementById('ingreso-placa').value = '';
+                document.getElementById('ingreso-espacio').value = '';
+                loadParkingData();
+            } else {
+                alert(`❌ Error: ${data.error || 'No se pudo registrar el ingreso'}`);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error de conexión al procesar el ingreso.');
+        }
+    }
+
+    async function handleSalir(e) {
+        e.preventDefault();
+        const placa = document.getElementById('salida-placa').value.trim();
+        try {
+            const res = await fetch('/parking/salir', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ placa })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                document.getElementById('salida-placa').value = '';
+                loadParkingData();
+            } else {
+                alert(data.error || 'Error al salir');
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    function quickFillSpace(codigo, isDisponible) {
+        if (isDisponible) {
+            document.getElementById('ingreso-espacio').value = codigo;
+            document.getElementById('ingreso-placa').focus();
+        } else {
+            alert(`Para liberar el espacio ${codigo}, ingresa la placa en la sección de Salida.`);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadParkingData();
+
+        if (typeof io !== 'undefined') {
+            const socket = io();
+            socket.on('arduino_event', (evt) => {
+                if (evt.parsed && evt.parsed.type === 'park') {
+                    loadParkingData();
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
+

@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Ciudad Inteligente UIS{% endblock %}
+
+{% block content %}
+<div class="page-header-block">
+    <h1 class="page-title">
+        <i class="ri-dashboard-3-line"></i> Panel de Control
+    </h1>
+    <p class="page-subtitle">Supervisión en tiempo real de los subsistemas IoT de la Universidad Industrial de Santander</p>
+</div>
+
+<!-- Key Metrics Overview Bar -->
+<div class="stats-overview-grid">
+    <div class="stat-box">
+        <div class="stat-box-icon icon-indigo">
+            <i class="ri-volume-up-line"></i>
+        </div>
+        <div class="stat-box-data">
+            <span class="stat-number" id="quick-db-val">62.4 <small style="font-size: 0.9rem; font-weight: normal;">dB</small></span>
+            <span class="stat-label">Nivel de Sonido Promedio</span>
+        </div>
+    </div>
+    
+    <div class="stat-box">
+        <div class="stat-box-icon icon-cyan">
+            <i class="ri-parking-box-line"></i>
+        </div>
+        <div class="stat-box-data">
+            <span class="stat-number" id="quick-parking-val">6 <small style="font-size: 0.9rem; color: #94a3b8; font-weight: normal;">/ 8 Libres</small></span>
+            <span class="stat-label">Disponibilidad Parqueadero</span>
+        </div>
+    </div>
+    
+    <div class="stat-box">
+        <div class="stat-box-icon icon-emerald">
+            <i class="ri-delete-bin-6-line"></i>
+        </div>
+        <div class="stat-box-data">
+            <span class="stat-number" id="quick-bin-val">0<small style="font-size: 0.9rem; font-weight: normal;">%</small></span>
+            <span class="stat-label">Nivel Vertedero</span>
+        </div>
+    </div>
+
+
+    <div class="stat-box">
+        <div class="stat-box-icon icon-amber">
+            <i class="ri-cpu-line"></i>
+        </div>
+        <div class="stat-box-data">
+            <span class="stat-number">COM3/5</span>
+            <span class="stat-label">Puerto Serie Prioritario</span>
+        </div>
+    </div>
+</div>
+
+<!-- Main System Modules Grid -->
+<div class="cards-grid">
+    <!-- Card 1: Sonido -->
+    <div class="modern-card">
+        <div>
+            <div class="card-header">
+                <div class="card-icon-wrapper icon-indigo">
+                    <i class="ri-volume-up-line"></i>
+                </div>
+                <span class="card-tag tag-live">Tiempo Real</span>
+            </div>
+            <div class="card-body">
+                <h3>Monitoreo de Sonido</h3>
+                <p>Medición continua de contaminación acústica en puntos clave del campus.</p>
+                
+                <div class="card-stat-preview">
+                    <div>
+                        <div class="stat-preview-lbl">Última Lectura</div>
+                        <div class="stat-preview-val" id="dash-sound-val">-- dB</div>
+                    </div>
+                    <span id="dash-sound-badge" class="badge-status badge-available">Nivel Seguro</span>
+                </div>
+                
+                <div class="progress-bar-container">
+                    <div id="dash-sound-progress" class="progress-fill fill-indigo" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
+        <div style="margin-top: 1.5rem;">
+            <a href="{{ url_for('sound.sound') }}" class="btn-primary">
+                Ver Monitoreo <i class="ri-arrow-right-line"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Card 2: Entrada y Salida de Materiales -->
+    <div class="modern-card">
+        <div>
+            <div class="card-header">
+                <div class="card-icon-wrapper icon-cyan">
+                    <i class="ri-exchange-box-line"></i>
+                </div>
+                <span class="card-tag tag-live">Tiempo Real</span>
+            </div>
+            <div class="card-body">
+                <h3>Entrada y Salida de Materiales</h3>
+                <p>Gestión y registro automatizado del flujo de materiales e insumos.</p>
+                
+                <div class="card-stat-preview">
+                    <div>
+                        <div class="stat-preview-lbl">Espacios Disponibles</div>
+                        <div class="stat-preview-val" id="dash-park-val">--</div>
+                    </div>
+                    <span id="dash-park-badge" class="badge-status badge-available">Cargando...</span>
+                </div>
+                
+                <div class="progress-bar-container">
+                    <div id="dash-park-progress" class="progress-fill fill-cyan" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
+        <div style="margin-top: 1.5rem;">
+            <a href="{{ url_for('parking.parking') }}" class="btn-primary">
+                Ver Registro de Materiales <i class="ri-arrow-right-line"></i>
+            </a>
+        </div>
+    </div>
+
+
+    <!-- Card 3: Vertedero de Basura -->
+    <div class="modern-card">
+        <div>
+            <div class="card-header">
+                <div class="card-icon-wrapper icon-emerald">
+                    <i class="ri-delete-bin-6-line"></i>
+                </div>
+                <span class="card-tag tag-live">Tiempo Real</span>
+            </div>
+            <div class="card-body">
+                <h3>Gestión de Vertedero de Basura</h3>
+                <p>Monitoreo continuo del nivel del vertedero principal y alerta automática al estar lleno (100%).</p>
+                
+                <div class="card-stat-preview">
+                    <div>
+                        <div class="stat-preview-lbl">Nivel Vertedero Principal</div>
+                        <div class="stat-preview-val" id="dash-bin-val">0%</div>
+                    </div>
+                    <span id="dash-bin-badge" class="badge-status badge-available">Normal</span>
+                </div>
+                
+                <div class="progress-bar-container">
+                    <div id="dash-bin-progress" class="progress-fill fill-emerald" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
+        <div style="margin-top: 1.5rem;">
+            <a href="{{ url_for('trash.trash') }}" class="btn-primary" style="background: var(--grad-emerald);">
+                Ver Vertedero de Basura <i class="ri-arrow-right-line"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Live Arduino Terminal Feed -->
+<div class="glass-panel" style="margin-top: 2rem;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+        <h3 style="font-family: var(--font-heading); font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="ri-terminal-window-line" style="color: var(--accent-cyan);"></i> Consola de Eventos Serial (COM3 / COM5)
+        </h3>
+        <span class="badge-status badge-available">Escuchando...</span>
+    </div>
+    
+    <div class="terminal-window">
+        <div class="terminal-header">
+            <div class="terminal-dots">
+                <span class="t-dot t-red"></span>
+                <span class="t-dot t-yellow"></span>
+                <span class="t-dot t-green"></span>
+            </div>
+            <span class="terminal-title">Serial Stream (SOUNDSET | BIN | PARK)</span>
+        </div>
+        <div class="terminal-body" id="serial-log-console">
+            <div class="terminal-line"><span class="terminal-timestamp">[SYSTEM]</span> Inicializando receptor de eventos Arduino en COM3 / COM5...</div>
+            <div class="terminal-line"><span class="terminal-timestamp">[SYSTEM]</span> Esperando trama de datos en formato SOUNDSET|id|db, BIN|id|lvl, PARK|placa|espacio|accion...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function updateSoundUI(dbVal) {
+        if (dbVal === null || isNaN(dbVal)) return;
+        const quickDb = document.getElementById('quick-db-val');
+        const dashSound = document.getElementById('dash-sound-val');
+        const soundProg = document.getElementById('dash-sound-progress');
+        const soundBadge = document.getElementById('dash-sound-badge');
+
+        if (quickDb) quickDb.innerHTML = `${dbVal.toFixed(1)} <small style="font-size: 0.9rem; font-weight: normal;">dB</small>`;
+        if (dashSound) dashSound.innerText = `${dbVal.toFixed(1)} dB`;
+
+        const pct = Math.min(100, Math.max(0, (dbVal / 100.0) * 100));
+        if (soundProg) {
+            soundProg.style.width = `${pct}%`;
+            soundProg.className = `progress-fill ${dbVal > 85 ? 'fill-rose' : (dbVal > 70 ? 'fill-amber' : 'fill-indigo')}`;
+        }
+        if (soundBadge) {
+            soundBadge.className = `badge-status ${dbVal > 85 ? 'badge-occupied' : (dbVal > 70 ? 'badge-warning' : 'badge-available')}`;
+            soundBadge.innerText = dbVal > 85 ? 'Nivel Crítico' : (dbVal > 70 ? 'Precaución' : 'Nivel Seguro');
+        }
+    }
+
+    function updateParkingUI(spaces) {
+        if (!Array.isArray(spaces)) return;
+        let free = 0;
+        let total = spaces.length;
+
+        spaces.forEach(s => { if (s.disponible) free++; });
+
+        const quickPark = document.getElementById('quick-parking-val');
+        const dashPark = document.getElementById('dash-park-val');
+        const parkBadge = document.getElementById('dash-park-badge');
+        const parkProg = document.getElementById('dash-park-progress');
+
+        const freePct = total > 0 ? Math.round((free / total) * 100) : 0;
+
+        if (quickPark) quickPark.innerHTML = `${free} <small style="font-size: 0.9rem; color: #94a3b8; font-weight: normal;">/ ${total} Libres</small>`;
+        if (dashPark) dashPark.innerText = `${free} de ${total}`;
+        if (parkBadge) {
+            parkBadge.className = `badge-status ${free === 0 ? 'badge-occupied' : (freePct < 25 ? 'badge-warning' : 'badge-available')}`;
+            parkBadge.innerText = free === 0 ? '¡COMPLETAMENTE LLENO!' : `${freePct}% Libre`;
+        }
+        if (parkProg) {
+            parkProg.style.width = `${freePct}%`;
+            parkProg.className = `progress-fill ${free === 0 ? 'fill-rose' : (freePct < 25 ? 'fill-amber' : 'fill-cyan')}`;
+        }
+    }
+
+    function updateBinUI(lvl) {
+        if (lvl === null || isNaN(lvl)) return;
+        const isFull = lvl >= 100;
+        const binVal = document.getElementById('dash-bin-val');
+        const binBadge = document.getElementById('dash-bin-badge');
+        const binProg = document.getElementById('dash-bin-progress');
+        const quickBin = document.getElementById('quick-bin-val');
+
+        if (binVal) binVal.innerText = isFull ? '100% LLENO' : `${lvl.toFixed(0)}%`;
+        if (quickBin) quickBin.innerHTML = `${lvl.toFixed(0)}<small style="font-size: 0.9rem; font-weight: normal;">%</small>`;
+        if (binBadge) {
+            binBadge.className = isFull ? 'badge-status badge-occupied' : (lvl >= 80 ? 'badge-status badge-warning' : 'badge-status badge-available');
+            binBadge.innerText = isFull ? '¡Completamente Lleno!' : (lvl >= 80 ? 'Casi Lleno' : 'Normal');
+        }
+        if (binProg) {
+            binProg.style.width = `${Math.min(100, Math.max(0, lvl))}%`;
+            binProg.className = `progress-fill ${isFull ? 'fill-rose' : (lvl >= 80 ? 'fill-amber' : 'fill-emerald')}`;
+        }
+    }
+
+    async function loadDashboardData() {
+        // Cargar datos reales de los 3 subsistemas en paralelo
+        try {
+            const [resSound, resPark, resTrash] = await Promise.allSettled([
+                fetch('/sound/data').then(r => r.json()),
+                fetch('/parking/data').then(r => r.json()),
+                fetch('/basura/data').then(r => r.json())
+            ]);
+
+            if (resSound.status === 'fulfilled' && Array.isArray(resSound.value) && resSound.value.length > 0) {
+                updateSoundUI(parseFloat(resSound.value[0].nivel_db));
+            }
+
+            if (resPark.status === 'fulfilled' && Array.isArray(resPark.value)) {
+                updateParkingUI(resPark.value);
+            }
+
+            if (resTrash.status === 'fulfilled' && resTrash.value.contenedores && resTrash.value.contenedores.length > 0) {
+                updateBinUI(parseFloat(resTrash.value.contenedores[0].nivel_actual));
+            }
+        } catch (e) {
+            console.error("Error al cargar datos del dashboard:", e);
+        }
+    }
+
+    // Escuchar actualizaciones en tiempo real vía SocketIO
+    document.addEventListener('DOMContentLoaded', () => {
+        loadDashboardData();
+
+        if (typeof io !== 'undefined') {
+            const socket = io();
+            const consoleBox = document.getElementById('serial-log-console');
+
+            socket.on('arduino_event', (data) => {
+                const now = new Date().toLocaleTimeString();
+                const rawText = data.raw || (data.parsed ? JSON.stringify(data.parsed) : JSON.stringify(data));
+                
+                if (consoleBox) {
+                    const line = document.createElement('div');
+                    line.className = 'terminal-line';
+                    line.innerHTML = `<span class="terminal-timestamp">[${now}]</span> RX (${data.port || 'SERIAL'}): <strong style="color: #38bdf8;">${rawText}</strong>`;
+                    consoleBox.appendChild(line);
+                    consoleBox.scrollTop = consoleBox.scrollHeight;
+                }
+
+                // 1. Evento de Sonido
+                let db = null;
+                if (data.parsed && data.parsed.type === 'sound') {
+                    db = parseFloat(data.parsed.nivel_db);
+                } else if (rawText && rawText.toUpperCase().startsWith('SOUNDSET')) {
+                    const parts = rawText.trim().split('|');
+                    if (parts.length >= 3) db = parseFloat(parts[2]);
+                }
+                if (db !== null && !isNaN(db)) {
+                    updateSoundUI(db);
+                }
+
+                // 2. Evento de Parqueadero
+                if (data.parsed && data.parsed.type === 'park') {
+                    fetch('/parking/data').then(r => r.json()).then(spaces => updateParkingUI(spaces)).catch(e => console.error(e));
+                }
+
+                // 3. Evento de Vertedero / Basura
+                if (data.parsed && data.parsed.type === 'bin') {
+                    const lvl = parseFloat(data.parsed.nivel);
+                    updateBinUI(lvl);
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
+

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Iniciar Sesión - Ciudad Inteligente UIS{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="auth-header">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="SmartCity UIS Logo" style="height: 64px; width: auto; margin-bottom: 0.8rem; filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.5));" />
+            <h2>Bienvenido</h2>
+            <p>Ingresa tus credenciales para acceder a la plataforma</p>
+        </div>
+
+
+        <form method="POST" action="{{ url_for('auth.login') }}">
+            <div class="form-group">
+                <label for="username" class="form-label">Usuario</label>
+                <div class="input-with-icon">
+                    <input type="text" id="username" name="username" class="form-input" placeholder="Nombre de usuario" required autocomplete="username" />
+                    <i class="ri-user-line"></i>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">Contraseña</label>
+                <div class="input-with-icon">
+                    <input type="password" id="password" name="password" class="form-input" placeholder="••••••••" required autocomplete="current-password" />
+                    <i class="ri-lock-2-line"></i>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary" style="margin-top: 1.5rem;">
+                <i class="ri-login-box-line"></i> Iniciar Sesión
+            </button>
+        </form>
+
+        <div class="auth-footer-link">
+            ¿No tienes cuenta? <a href="{{ url_for('auth.register') }}">Regístrate aquí</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

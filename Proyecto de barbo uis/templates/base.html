@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Ciudad Inteligente - UIS{% endblock %}</title>
+    <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Remix Icon CDN for modern minimalist line icons -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+    <!-- Favicon Icon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}" />
+    <!-- Core App CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="dark-theme">
+    <!-- Ambient Lighting FX -->
+    <div class="ambient-light light-1"></div>
+    <div class="ambient-light light-2"></div>
+    
+    <!-- Header / Navigation -->
+    <header class="navbar-header">
+        <div class="nav-container">
+            <a href="{{ url_for('dashboard.dashboard') }}" class="brand-logo">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="SmartCity UIS Logo" class="brand-logo-img" />
+                <div class="brand-text">
+                    <span class="title">SmartCity</span>
+                    <span class="subtitle">UIS PLATFORM</span>
+                </div>
+            </a>
+
+            
+            <nav class="nav-menu">
+                {% if current_user.is_authenticated %}
+                <a href="{{ url_for('dashboard.dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard.dashboard' %}active{% endif %}">
+                    <i class="ri-dashboard-3-line"></i> <span>Dashboard</span>
+                </a>
+                <a href="{{ url_for('sound.sound') }}" class="nav-link {% if request.endpoint == 'sound.sound' %}active{% endif %}">
+                    <i class="ri-volume-up-line"></i> <span>Sonido</span>
+                </a>
+                <a href="{{ url_for('parking.parking') }}" class="nav-link {% if request.endpoint == 'parking.parking' %}active{% endif %}">
+                    <i class="ri-exchange-box-line"></i> <span>Entrada y Salida de Materiales</span>
+                </a>
+                <a href="{{ url_for('trash.trash') }}" class="nav-link {% if request.endpoint == 'trash.trash' %}active{% endif %}">
+                    <i class="ri-delete-bin-6-line"></i> <span>Gestión de Basura</span>
+                </a>
+                {% endif %}
+            </nav>
+
+
+            <div class="nav-actions">
+                {% if current_user.is_authenticated %}
+                {% if current_user.is_admin %}
+                <button id="btnConnectWebSerial" class="btn-web-serial" title="Conectar Arduino USB físicamente en cualquier puerto COM desde tu navegador (Modo Desarrollador)">
+                    <i class="ri-usb-line"></i> <span id="webSerialStatusText">Conectar Arduino USB</span>
+                </button>
+                {% endif %}
+                <div class="system-status-badge">
+                    <span class="pulse-dot green"></span>
+                    <span class="status-text" id="systemStatusText">En línea</span>
+                </div>
+                <div class="user-profile-badge">
+                    <div class="user-avatar">
+                        <i class="ri-user-3-line"></i>
+                    </div>
+                    <div class="user-info">
+                        <span class="user-name">{{ current_user.username }}</span>
+                        {% if current_user.is_admin %}
+                        <span class="user-role">ADMIN/DEV</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <a href="{{ url_for('auth.logout') }}" class="btn-icon-logout" title="Cerrar sesión">
+                    <i class="ri-logout-box-r-line"></i>
+                </a>
+                {% else %}
+                <a href="{{ url_for('auth.login') }}" class="btn-login-header">
+                    <i class="ri-user-shared-line"></i> Iniciar Sesión
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-wrapper">
+        <div class="content-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="toast-notifications">
+                {% for category, message in messages %}
+                <div class="toast-item toast-{{ category }}">
+                    <div class="toast-icon">
+                        {% if category == 'success' %}<i class="ri-checkbox-circle-fill"></i>
+                        {% elif category == 'danger' %}<i class="ri-error-warning-fill"></i>
+                        {% elif category == 'warning' %}<i class="ri-alert-fill"></i>
+                        {% else %}<i class="ri-information-fill"></i>{% endif %}
+                    </div>
+                    <span class="toast-msg">{{ message }}</span>
+                    <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Minimalist Footer -->
+    <footer class="main-footer">
+        <div class="footer-container">
+            <div class="footer-left">
+                <i class="ri-shield-check-line"></i> Monitoreo IoT en Tiempo Real &bull; Universidad Industrial de Santander
+            </div>
+            <div class="footer-right">
+                &copy; 2026 Ciudad Inteligente. Todos los derechos reservados.
+            </div>
+        </div>
+    </footer>
+
+    <!-- SocketIO & Common Script -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/socket.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

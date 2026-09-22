@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block title %}Monitoreo de Sonido - Ciudad Inteligente UIS{% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header-block" style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <h1 class="page-title">
+            <i class="ri-volume-up-line"></i> Monitoreo de Sonido Arduino
+        </h1>
+        <p class="page-subtitle">Visualización continua de decibelios (dB) recibidos directamente de sensores Arduino IoT</p>
+    </div>
+    <div>
+        <span class="badge-status badge-available" id="arduino-connection-badge">
+            <span class="pulse-dot green"></span> Escuchando Serie (FORMATO: SOUNDSET|id|db)
+        </span>
+    </div>
+</div>
+
+<!-- Stats Bar for Sound -->
+<div class="stats-overview-grid">
+    <div class="stat-box">
+        <div class="stat-box-icon icon-indigo">
+            <i class="ri-volume-up-line"></i>
+        </div>
+        <div class="stat-box-data">
+            <span class="stat-number" id="sound-current-db">-- dB</span>
+            <span class="stat-label">Nivel Actual (dB)</span>
+        </div>
+    </div>
+    
+    <div class="stat-box">
+        <div class="stat-box-icon icon-amber">
+            <i class="ri-bar-chart-fill"></i>
+        </div>
+        <div class="stat-box-data">
+            <span class="stat-number" id="sound-peak-db">-- dB</span>
+            <span class="stat-label">Pico Máximo</span>
+        </div>
+    </div>
+    
+    <div class="stat-box">
+        <div class="stat-box-icon icon-cyan">
+            <i class="ri-time-line"></i>
+        </div>
+        <div class="stat-box-data">
+            <span class="stat-number" id="sound-avg-db">-- dB</span>
+            <span class="stat-label">Promedio Reciente</span>
+        </div>
+    </div>
+</div>
+
+<!-- WHITE BACKGROUND GRAPH PANEL FOR REAL ARDUINO SOUND DATA -->
+<div class="white-graph-panel" style="margin-bottom: 2rem;">
+    <div class="white-graph-header">
+        <div class="white-graph-title">
+            <i class="ri-pulse-line" style="color: #6366f1;"></i>
+            <span>Gráfica en Tiempo Real de Datos del Arduino (dB)</span>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <button class="btn-secondary" style="padding: 0.4rem 0.9rem; font-size: 0.82rem; background: #f8fafc; color: #0f172a; border-color: #cbd5e1;" onclick="loadSoundData()">
+                <i class="ri-refresh-line"></i> Actualizar
+            </button>
+        </div>
+    </div>
+    
+    <!-- White Background Chart Container -->
+    <div style="position: relative; height: 400px; width: 100%; background: #ffffff; padding: 0.5rem; border-radius: var(--radius-sm);">
+        <canvas id="realArduinoSoundChart"></canvas>
+    </div>
+
+    <!-- Status Legend -->
+    <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem; color: #475569;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #6366f1;"></span>
+            <span style="font-weight: 600; color: #0f172a;">Línea de Datos del Sensor Arduino (Nivel de Ruido en dB)</span>
+        </div>
+        <div id="last-update-time" style="font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;">
+            Esperando primera lectura...
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let realArduinoChart;
+    let allReceivedValues = [];
+
+    function initRealArduinoChart() {
+        const ctx = document.getElementById('realArduinoSoundChart').getContext('2d');
+        
+        // Gradient fill for white background
+        const gradient = ctx.createLinearGradient(0, 0, 0, 350);
+        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.35)');
+        gradient.addColorStop(1, 'rgba(99, 102, 241, 0.02)');
+
+        realArduinoChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Nivel de Ruido (dB)',
+                    data: [],
+                    borderColor: '#4f46e5',
+                    borderWidth: 3,
+                    backgroundColor: gradient,
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: '#6366f1',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#818cf8',
+                        borderColor: '#cbd5e1',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                return ` Sensor Arduino: ${context.parsed.y} dB`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(0, 0, 0, 0.06)', strokeDashArray: [3, 3] },
+                        ticks: { color: '#334155', font: { family: 'Inter', size: 11, weight: '500' } },
+                        title: { display: true, text: 'Tiempo (Hora)', color: '#64748b', font: { size: 12, weight: '600' } }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: 100,
+                        grid: { color: 'rgba(0, 0, 0, 0.06)' },
+                        ticks: { color: '#334155', font: { family: 'Inter', size: 11, weight: '500' } },
+                        title: { display: true, text: 'Intensidad Acústica (dB)', color: '#64748b', font: { size: 12, weight: '600' } }
+                    }
+                }
+            }
+        });
+    }
+
+    async function loadSoundData() {
+        try {
+            const res = await fetch('/sound/data');
+            const data = await res.json();
+            
+            if (Array.isArray(data) && data.length > 0) {
+                const labels = data.map(d => new Date(d.timestamp).toLocaleTimeString()).reverse();
+                const values = data.map(d => d.nivel_db).reverse();
+
+                allReceivedValues = [...values];
+                realArduinoChart.data.labels = labels;
+                realArduinoChart.data.datasets[0].data = values;
+                realArduinoChart.update();
+
+                updateStats(values);
+                document.getElementById('last-update-time').innerText = `Última sincronización: ${labels[labels.length - 1]}`;
+            }
+        } catch (e) {
+            console.warn("No se pudieron cargar datos previos:", e);
+        }
+    }
+
+    function updateStats(values) {
+        if (!values || values.length === 0) return;
+        const current = values[values.length - 1];
+        const peak = Math.max(...values);
+        const avg = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
+
+        document.getElementById('sound-current-db').innerText = `${current} dB`;
+        document.getElementById('sound-peak-db').innerText = `${peak} dB`;
+        document.getElementById('sound-avg-db').innerText = `${avg} dB`;
+    }
+
+    function handleRealArduinoPacket(evt) {
+        let dbVal = null;
+        let sensorId = 'A1';
+
+        if (evt && evt.parsed && evt.parsed.type === 'sound') {
+            dbVal = parseFloat(evt.parsed.nivel_db);
+            sensorId = evt.parsed.sensor_id || 'A1';
+        } else if (evt && typeof evt.raw === 'string') {
+            const parts = evt.raw.trim().split('|');
+            if (parts.length >= 3 && parts[0].toUpperCase() === 'SOUNDSET') {
+                sensorId = parts[1];
+                dbVal = parseFloat(parts[2]);
+            }
+        }
+
+        if (dbVal !== null && !isNaN(dbVal)) {
+            const timeStr = new Date().toLocaleTimeString();
+            allReceivedValues.push(dbVal);
+
+            realArduinoChart.data.labels.push(timeStr);
+            realArduinoChart.data.datasets[0].data.push(dbVal);
+
+            if (realArduinoChart.data.labels.length > 30) {
+                realArduinoChart.data.labels.shift();
+                realArduinoChart.data.datasets[0].data.shift();
+            }
+
+            realArduinoChart.update();
+            updateStats(allReceivedValues);
+
+            document.getElementById('arduino-connection-badge').innerHTML = 
+                `<span class="pulse-dot green"></span> Sensor ${sensorId}: Recibiendo (${dbVal.toFixed(1)} dB)`;
+            document.getElementById('last-update-time').innerText = `Último paquete: ${timeStr}`;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initRealArduinoChart();
+        loadSoundData();
+
+        // Auto-refresh chart and metrics automatically every 3 seconds (3000 ms)
+        setInterval(loadSoundData, 3000);
+
+        // Listen for real Arduino serial packets via SocketIO
+        if (typeof io !== 'undefined') {
+            const socket = io();
+            socket.on('arduino_event', (evt) => {
+                handleRealArduinoPacket(evt);
+            });
+        }
+    });
+</script>
+{% endblock %}
+
+
+

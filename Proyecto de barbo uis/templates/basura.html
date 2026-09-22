@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% block title %}Vertedero de Basura - Ciudad Inteligente UIS{% endblock %}
+
+{% block content %}
+<div class="page-header-block" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 class="page-title">
+            <i class="ri-delete-bin-6-line" style="color: var(--accent-emerald);"></i> Vertedero de Basura
+        </h1>
+        <p class="page-subtitle">Monitoreo en tiempo real del nivel de llenado del vertedero principal transmitido por el Arduino del campus</p>
+    </div>
+    <div>
+        <span class="badge-status badge-available">
+            <span class="pulse-dot green"></span> Receptor Serie Único: BIN|nivel &amp; SOUNDSET|db
+        </span>
+    </div>
+</div>
+
+<!-- Dynamic Alert Banner for FULL Vertedero -->
+<div id="alert-full-banner" style="display: none; background: rgba(244, 63, 94, 0.15); border: 2px solid var(--accent-rose); border-radius: 16px; padding: 1.25rem 1.5rem; margin-bottom: 2rem; backdrop-filter: blur(10px); animation: pulseAlert 2s infinite;">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        <div style="font-size: 2.5rem; color: var(--accent-rose);">
+            <i class="ri-alarm-warning-fill"></i>
+        </div>
+        <div style="flex: 1;">
+            <h4 style="font-family: var(--font-heading); color: #fff; font-size: 1.2rem; font-weight: 800; margin-bottom: 0.25rem;">
+                🚨 ¡ATENCIÓN! VERTEDERO DE BASURA COMPLETAMENTE LLENO
+            </h4>
+            <p id="alert-full-msg" style="color: #fca5a5; font-size: 0.95rem; margin: 0;">
+                El vertedero principal de la Universidad ha alcanzado el 100% de su capacidad máxima. Se requiere la intervención del equipo de recolección de manera inmediata.
+            </p>
+        </div>
+        <button class="btn-primary" style="background: linear-gradient(135deg, #f43f5e, #e11d48); font-size: 0.85rem; padding: 0.5rem 1rem;" onclick="loadTrashData()">
+            <i class="ri-refresh-line"></i> Actualizar
+        </button>
+    </div>
+</div>
+
+<!-- Main Single Vertedero Card -->
+<div class="glass-panel" style="margin-bottom: 2rem; padding: 2rem; position: relative; overflow: hidden;" id="main-vertedero-card">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 1.5rem;">
+        <div style="display: flex; align-items: center; gap: 1.25rem;">
+            <div id="vertedero-icon-box" style="width: 64px; height: 64px; border-radius: 16px; background: rgba(16, 185, 129, 0.12); color: var(--accent-emerald); display: flex; align-items: center; justify-content: center; font-size: 2rem; border: 1px solid rgba(16, 185, 129, 0.3);">
+                <i class="ri-delete-bin-6-fill"></i>
+            </div>
+            <div>
+                <h2 style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: #fff; margin-bottom: 0.2rem;">
+                    Vertedero Principal Campus UIS
+                </h2>
+                <span style="color: #94a3b8; font-size: 0.9rem;">
+                    <i class="ri-map-pin-2-line" style="color: var(--accent-cyan);"></i> Vertedero Central - Plaza de la Autonomía UIS &bull; Capacidad: 500 Litros
+                </span>
+            </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <button class="btn-primary" style="background: var(--grad-emerald); padding: 0.45rem 0.9rem; font-size: 0.85rem;" onclick="vaciarVertedero()" title="Establecer el nivel del vertedero en 0%">
+                <i class="ri-recycle-line"></i> Vaciar Vertedero (0%)
+            </button>
+            <span id="vertedero-badge-status" class="badge-status badge-available" style="font-size: 0.9rem; padding: 0.4rem 0.9rem;">
+                <i class="ri-checkbox-circle-line"></i> Capacidad Normal
+            </span>
+        </div>
+    </div>
+
+    <!-- Gauge Level Display -->
+    <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.75rem;">
+            <div>
+                <span style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Nivel Actual de Llenado</span>
+                <div style="font-family: var(--font-heading); font-size: 3.5rem; font-weight: 800; line-height: 1; margin-top: 0.3rem;" id="vertedero-percentage-num">
+                    0%
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <span style="font-size: 0.85rem; color: #94a3b8; font-weight: 600;">Estado de Alarma</span>
+                <div style="font-size: 1.1rem; font-weight: 700; color: var(--accent-emerald); margin-top: 0.3rem;" id="vertedero-alarm-text">
+                    Sin Incidencias
+                </div>
+            </div>
+        </div>
+
+        <div class="progress-bar-container" style="height: 16px; border-radius: 10px; background: rgba(0,0,0,0.4); padding: 2px;">
+            <div id="vertedero-progress-bar" class="progress-fill fill-emerald" style="width: 0%; height: 100%; border-radius: 8px; transition: width 0.5s ease, background 0.5s ease;"></div>
+        </div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #64748b; flex-wrap: wrap; gap: 0.5rem;">
+        <span><i class="ri-pulse-line" style="color: var(--accent-cyan);"></i> Recibiendo lecturas automáticamente por el puerto serie del Arduino</span>
+        <span id="vertedero-last-update">Última lectura: --</span>
+    </div>
+</div>
+
+<!-- History Table -->
+<div class="glass-panel">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+        <h3 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+            <i class="ri-history-line" style="color: var(--accent-indigo);"></i> Historial de Lecturas del Vertedero
+        </h3>
+        <button class="btn-secondary" style="border-color: rgba(244, 63, 94, 0.4); color: #fca5a5; font-size: 0.82rem; padding: 0.4rem 0.85rem;" onclick="vaciarHistorial()">
+            <i class="ri-delete-bin-line"></i> Vaciar Historial
+        </button>
+    </div>
+
+    <div class="table-responsive-wrapper">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Vertedero</th>
+                    <th>Nivel Registrado</th>
+                    <th>Estado de Capacidad</th>
+                    <th>Fecha y Hora</th>
+                </tr>
+            </thead>
+            <tbody id="trash-history-body">
+                <!-- Filled via JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadTrashData() {
+        try {
+            const res = await fetch('/basura/data');
+            const data = await res.json();
+            renderTrashUI(data);
+        } catch (err) {
+            console.error("Error loading trash data:", err);
+        }
+    }
+
+    function renderTrashUI(data) {
+        const historyBody = document.getElementById('trash-history-body');
+        const alertBanner = document.getElementById('alert-full-banner');
+
+        const numDisplay = document.getElementById('vertedero-percentage-num');
+        const alarmText = document.getElementById('vertedero-alarm-text');
+        const progressBar = document.getElementById('vertedero-progress-bar');
+        const badgeStatus = document.getElementById('vertedero-badge-status');
+        const iconBox = document.getElementById('vertedero-icon-box');
+        const lastUpdate = document.getElementById('vertedero-last-update');
+
+        historyBody.innerHTML = '';
+
+        const bins = data.contenedores || [];
+        const lecturas = data.lecturas || [];
+        const currentBin = bins.length > 0 ? bins[0] : { nivel_actual: 0, is_full: false };
+
+        const lvl = currentBin.nivel_actual;
+        const isFull = currentBin.is_full || lvl >= 100;
+        const isWarn = lvl >= 80 && !isFull;
+
+        // Render percentage and gauge
+        numDisplay.innerText = `${lvl.toFixed(0)}%`;
+        numDisplay.style.color = isFull ? 'var(--accent-rose)' : (isWarn ? '#f59e0b' : 'var(--accent-emerald)');
+
+        // Update progress bar
+        progressBar.style.width = `${Math.min(100, Math.max(0, lvl))}%`;
+        progressBar.className = `progress-fill ${isFull ? 'fill-rose' : (isWarn ? 'fill-amber' : 'fill-emerald')}`;
+
+        // Update badge and colors
+        if (isFull) {
+            badgeStatus.className = 'badge-status badge-occupied';
+            badgeStatus.innerHTML = '<i class="ri-error-warning-fill"></i> COMPLETAMENTE LLENO';
+            alarmText.innerText = '🚨 ALERTA: Vertedero Lleno (100%)';
+            alarmText.style.color = 'var(--accent-rose)';
+            iconBox.style.background = 'rgba(244, 63, 94, 0.15)';
+            iconBox.style.color = 'var(--accent-rose)';
+            iconBox.style.borderColor = 'rgba(244, 63, 94, 0.4)';
+            alertBanner.style.display = 'block';
+        } else if (isWarn) {
+            badgeStatus.className = 'badge-status badge-warning';
+            badgeStatus.innerHTML = '<i class="ri-alert-line"></i> Atención (Casi Lleno)';
+            alarmText.innerText = '⚠️ Advertencia de Capacidad (80%+)';
+            alarmText.style.color = '#f59e0b';
+            iconBox.style.background = 'rgba(245, 158, 11, 0.15)';
+            iconBox.style.color = '#f59e0b';
+            iconBox.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+            alertBanner.style.display = 'none';
+        } else {
+            badgeStatus.className = 'badge-status badge-available';
+            badgeStatus.innerHTML = '<i class="ri-checkbox-circle-line"></i> Capacidad Normal';
+            alarmText.innerText = 'Sin Incidencias';
+            alarmText.style.color = 'var(--accent-emerald)';
+            iconBox.style.background = 'rgba(16, 185, 129, 0.12)';
+            iconBox.style.color = 'var(--accent-emerald)';
+            iconBox.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+            alertBanner.style.display = 'none';
+        }
+
+        if (lecturas.length > 0) {
+            lastUpdate.innerText = `Última lectura: ${lecturas[0].timestamp}`;
+        } else {
+            lastUpdate.innerText = `Historial sin lecturas`;
+        }
+
+        // Render history table
+        if (lecturas.length === 0) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="4" style="text-align: center; color: #64748b; padding: 1.5rem;">El historial de lecturas está vacío.</td>`;
+            historyBody.appendChild(tr);
+        } else {
+            lecturas.forEach(l => {
+                const tr = document.createElement('tr');
+                const isFullLect = l.nivel >= 100;
+                const isWarnLect = l.nivel >= 80 && !isFullLect;
+                tr.innerHTML = `
+                    <td><strong style="font-family: var(--font-heading); color: #fff;">Vertedero Principal UIS</strong></td>
+                    <td><strong style="color: ${isFullLect ? 'var(--accent-rose)' : (isWarnLect ? '#f59e0b' : '#fff')}; font-size: 1.05rem;">${l.nivel}%</strong></td>
+                    <td>
+                        <span class="badge-status ${isFullLect ? 'badge-occupied' : (isWarnLect ? 'badge-warning' : 'badge-available')}">
+                            ${isFullLect ? 'COMPLETAMENTE LLENO' : (isWarnLect ? 'Casi Lleno' : 'Normal')}
+                        </span>
+                    </td>
+                    <td style="color: #94a3b8; font-size: 0.85rem;">${l.timestamp}</td>
+                `;
+                historyBody.appendChild(tr);
+            });
+        }
+    }
+
+    async function vaciarVertedero() {
+        if (!confirm('¿Deseas vaciar el vertedero y restablecer su nivel de llenado a 0%?')) return;
+        try {
+            const res = await fetch('/basura/vaciar', { method: 'POST' });
+            if (res.ok) {
+                loadTrashData();
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function vaciarHistorial() {
+        if (!confirm('¿Deseas eliminar todo el historial de lecturas del vertedero?')) return;
+        try {
+            const res = await fetch('/basura/vaciar-historial', { method: 'POST' });
+            if (res.ok) {
+                loadTrashData();
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadTrashData();
+
+        if (typeof io !== 'undefined') {
+            const socket = io();
+            socket.on('arduino_event', (evt) => {
+                if (evt.parsed && evt.parsed.type === 'bin') {
+                    loadTrashData();
+                }
+            });
+        }
+    });
+</script>
+<style>
+    @keyframes pulseAlert {
+        0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4); }
+        70% { box-shadow: 0 0 0 15px rgba(244, 63, 94, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
+    }
+</style>
+{% endblock %}
